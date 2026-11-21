@@ -1,0 +1,14 @@
+{
+  "name": "java_http_server",
+  "version": "1.0.0",
+  "description": "Http server java project",
+  "license": "ISC",
+  "author": "Przemysław Chliszcz",
+  "type": "module",
+  "main": "mainApp.java",
+  "scripts": {
+    "start" : "java -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp .dataEnv",
+    "compile" : "javac -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp.java",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
