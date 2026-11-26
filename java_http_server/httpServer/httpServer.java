@@ -14,6 +14,8 @@ public class httpServer implements Runnable {
 
     public ServerSocket servSock ;
 
+    public InetSocketAddress sockAddr ;
+
     public Map<String,String> dataConfig = new HashMap<>();
 
     public sqlModule sql_module;
@@ -49,7 +51,7 @@ public class httpServer implements Runnable {
             {
                 int port = Integer.parseInt(this.dataConfig.get("listenPort"));
                 this.servSock = new ServerSocket();
-                InetSocketAddress sockAddr = new InetSocketAddress("127.0.0.1", port);
+                sockAddr = new InetSocketAddress("127.0.0.1", port);
                 servSock.bind(sockAddr);  
                 System.out.println("Http Server crated and listening on port : " + port);
 
@@ -112,7 +114,7 @@ public class httpServer implements Runnable {
 
 
     public void exit()
-    {
+    {     
         is_exit = true;
 
         try

@@ -1,28 +1,42 @@
 package httpServer;
 import java.io.StringReader;
-import java.lang.String;
 import java.util.*;
+import java.lang.String;
+
+import java.nio.charset.StandardCharsets;
+
 import javax.json.*;
 
 public class requestParser {
 
-    String method = "";
-    String path = "";
-    String protocol = "";
-    Map<String,String> urlParams = new HashMap<>();
-    Map<String,String> headers = new HashMap<>();
+    public String method = "";
+    public String path = "";
+    public String protocol = "";
+    public Map<String,String> urlParams = new HashMap<>();
+    public Map<String,String> headers = new HashMap<>();
+    public char [] requestBuffer_char = new char[15000];
+    public int requestBuffer_char_size = 0;
+    public char [] bodyChar;
+    public JsonObject jsonObj;
+
+    int retVal = 0;
+
     int content_length = 0;
-    String buffer = "";
-    JsonObject jsonObj;
+
+    ArrayList <String>requestBuffer_headersList = null;
+    String requestBuffer_str = null ;
+
+    boolean getAllHeaders = false;
+
 
     String methods [] = {"GET", "POST", "PUT", "OPTIONS", "HEAD", "TRACE", "DELETE", "PATH", "CONNECT"};
     String protocols [] = {"HTTP/1.0", "HTTP/1.1", "HTTP/2.0", "HTTP/3.0"}; 
 
-    String textContentType = "text/plain";
+  //  String textContentType = "text/plain";
     String jsonContentType = "application/json";
 
     String queryRegExp = "^\\?([\\w-]+(=[\\w-]*)?(&[\\w-]+(=[\\w-]*)?)*)?$";
-    String jsonValueRegExp = "^\"([a-zA-Z])+(([-])?([a-zA-Z]))*\": ((true)|(false)|([0-9])+|(\"([a-z A-Z'!@#$%^&*()+=-_,.?ęóśłżźćń<>/0-9](\\\")*)+\"))$";
+   // String jsonValueRegExp = "^\"([a-zA-Z])+(([-])?([a-zA-Z]))*\": ((true)|(false)|([0-9])+|(\"([a-z A-Z'!@#$%^&*()+=-_,.?ęóśłżźćń<>/0-9](\\\")*)+\"))$";
     String headerRegExp = "^([a-zA-Z])+(([-])?([a-zA-Z]))*: ([a-z A-Z':!-;@#$%^&*()+=-_,.?ęóśłżźćń<>\\/0-9])+$";
 
     public  requestParser()
@@ -30,25 +44,74 @@ public class requestParser {
        
     }
 
-    public int parse(ArrayList<String> requestBuffer)
+    public int parse(char [] buffer, int buffer_size)
     {
-        int retVal = 0;
         int index = 0;
 
-        while(index < requestBuffer.size() && requestBuffer.get(index).length() > 0)
+        int bodyByte_index = 2;
+
+        if(buffer_size > 15000)
+            return retVal = 1;
+        
+        if(buffer_size > requestBuffer_char_size)
+        {
+            System.arraycopy(buffer, requestBuffer_char_size, requestBuffer_char,requestBuffer_char_size, buffer_size - requestBuffer_char_size);
+            requestBuffer_char_size = buffer_size;
+        }
+        else 
+            return retVal;
+        
+        requestBuffer_str = new String(requestBuffer_char, 0, buffer_size);
+
+        if(requestBuffer_str.indexOf("\r\n\r\n")==-1)
+            return retVal = -1;
+     
+        Scanner sc = new Scanner(requestBuffer_str);
+
+        requestBuffer_headersList = new ArrayList<String>();
+
+        getAllHeaders = false;
+
+        while(sc.hasNextLine())
+        {
+            String headerItem = sc.nextLine();
+
+            if(headerItem.compareTo("") == 0)
+            {
+                getAllHeaders = true;
+                break;
+            }
+
+            requestBuffer_headersList.add(headerItem);
+        }
+
+        sc.close();
+
+        if(!getAllHeaders)
+            return retVal = -2;
+
+        method = "";
+        path = "";
+        protocol = "";
+        urlParams.clear();
+        headers.clear();
+
+        while(requestBuffer_headersList.size() > index)
         {
             if(index == 0)
             {
 
-                String [] urlStr = requestBuffer.get(index).split(" ");
+                bodyByte_index += requestBuffer_headersList.get(index).length() + 2;
+
+                String [] urlStr = requestBuffer_headersList.get(index).split(" ");
 
                 if(urlStr.length != 3)
                 {
-                    retVal = 1;
+                    retVal = 2;
                     break;
                 }
 
-                retVal = 2;
+                retVal = 3;
 
                 for(int i = 0; i < methods.length; i++)
                 {
@@ -74,7 +137,7 @@ public class requestParser {
                 {   
                     if(urlStr[1].charAt(j) !='?' || j + 3 >= urlStr[1].length())
                     {
-                        retVal = 3;
+                        retVal = 4;
                         break;
                     }
 
@@ -82,7 +145,7 @@ public class requestParser {
 
                     if(!queryS.matches(this.queryRegExp))
                     {
-                        retVal =4;
+                        retVal =5;
                         break;
                     }
 
@@ -118,77 +181,91 @@ public class requestParser {
             }
             else
             {
-                if(!requestBuffer.get(index).matches(this.headerRegExp))
+                String headerItem = requestBuffer_headersList.get(index);
+
+                if(!headerItem.matches(this.headerRegExp))
                 {
                     retVal = 8;
                     break;
                 }
 
-                String header_key_value[] = requestBuffer.get(index).split(": ");
+                bodyByte_index += headerItem.length() + 2;
+
+                String header_key_value[] = headerItem.split(": ");
                 this.headers.put(header_key_value[0], header_key_value[1]);
             }
 
             index ++;
+           
         }
 
         if(retVal != 0)
             return retVal;
-        
-        if(requestBuffer.get(index).compareTo("") == 0 && index + 1 <= requestBuffer.size())
+  
+        if( method.compareTo("POST") == 0)
         {
-            do
+            String contentType = headers.get("Content-Type");
+            String contentLength = headers.get("Content-Length");
+
+            if(contentType == null || contentLength == null)
+                return retVal = 10;
+
+            try
             {
-                index++;
-                if(index >= requestBuffer.size())
-                    break;
-
-            }while(requestBuffer.get(index).compareTo("") == 0);
-
-            if(index < requestBuffer.size())
+                content_length = Integer.parseInt(contentLength, 10);
+                
+            } 
+            catch (NumberFormatException ex)
             {
-                String contentType = headers.get("Content-Type");
-                String contentLength = headers.get("Content-Length");
+                retVal = 11;
+            }
+            
+            if(content_length == 0)
+            {
+                if(bodyByte_index < buffer_size)
+                    return retVal =  -3;
+                else if(bodyByte_index == buffer_size)
+                    return retVal = 0;
+                else return retVal = 12;
+            }
 
-                try
+            if(bodyByte_index + 1 <= buffer_size)
+            {
+
+
+                if(content_length >= 0 && retVal == 0)
                 {
-                   content_length = Integer.parseInt(contentLength, 10);
+         
+                    bodyChar = Arrays.copyOfRange(requestBuffer_char, bodyByte_index, requestBuffer_char_size);
                     
-                } 
-                catch (NumberFormatException ex)
-                {
-                    retVal = 9;
-                }
-                if(contentType.length() > 0 && retVal == 0)
-                {
-                   
-                    for(int i = index; i < requestBuffer.size(); i++)
-                    {
-                        buffer = buffer.concat(requestBuffer.get(i));
-                        if(i + 1 < requestBuffer.size())
-                            buffer = buffer.concat("\r\n");
-                    }
+                    byte [] bodyByte = new String(bodyChar).getBytes(StandardCharsets.UTF_8);
 
-                    if(content_length <= buffer.length())
-                        retVal = 10;
-                    else
+                    int bodyChar_size = bodyByte.length;
+
+                    if(content_length != bodyChar_size)
+                        return retVal= -4;
+
+                    if(contentType.compareTo(jsonContentType)==0)
                     {
-                        if(contentType.compareTo(jsonContentType)==0)
+                        try
                         {
-                            try
-                            {
-                                JsonReader jsonReader = Json.createReader(new StringReader(buffer));
-                                jsonObj = jsonReader.readObject();
-                                jsonReader.close();
-                            }
-                            catch(JsonException jsonException)
-                            {
-                                System.out.println(jsonException);
-                            }
+                            String bodyStr = new String(bodyByte,0, bodyByte.length, StandardCharsets.UTF_8);
+
+                            JsonReader jsonReader = Json.createReader(new StringReader(bodyStr));
+                            jsonObj = jsonReader.readObject();
+                            jsonReader.close();
+                        }
+                        catch(JsonException jsonException)
+                        {
+                            System.out.println(jsonException);
+                            retVal = 13;
                         }
                     }
+                    
                 }
-                else retVal = 9; 
+                else retVal = 14; 
             }
+            else retVal = -5;
         }
         return retVal;
     }

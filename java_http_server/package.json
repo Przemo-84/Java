@@ -9,6 +9,8 @@
   "scripts": {
     "start" : "java -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp .dataEnv",
     "compile" : "javac -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp.java",
+    "linux_start" : "java -cp ./:jar/javax.json-1.1.4.jar:jar/postgresql-42.7.2.jar:jar/HikariCP-7.0.2.jar:jar/slf4j-api-1.7.2.jar:jar/slf4j-simple-1.7.2.jar mainApp .dataEnv",
+    "linux_compile" : "javac -cp ./:jar/javax.json-1.1.4.jar:jar/postgresql-42.7.2.jar:jar/HikariCP-7.0.2.jar:jar/slf4j-api-1.7.2.jar:jar/slf4j-simple-1.7.2.jar mainApp.java",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

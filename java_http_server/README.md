@@ -1,140 +1,75 @@
 # java_http_server
 
-Serwer HTTP w Javie oparty na gniazdach TCP. Powstał na potrzeby portalu aukcyjnego. Nasłuchuje na skonfigurowanym porcie, odczytuje żądanie HTTP, rozdziela ścieżkę, parametry i nagłówki, a następnie przekazuje dane do klasy obsługującej daną trasę.
+Moduł do budowy API w Javie na Linuksie. Przyjmuje żądania HTTP przez TCP i rozdziela obsługę metod GET i POST między dwie klasy tras. Powstał jako część większego portalu. Zawiera opcjonalny moduł PostgreSQL z pulą połączeń HikariCP.
 
-Po uruchomieniu serwer udostępnia stronę powitalną pod `GET /`. Można go używać bez bazy albo włączyć moduł PostgreSQL z pulą połączeń HikariCP. W portalu moduł ten dostarczał na stronę główną dane o najbliższej nadchodzącej aukcji.
+## Wdrożenie na Linuksie
 
-## Uruchomienie bez bazy
+1. Przygotuj JDK 11 lub nowszy oraz Node.js z npm. Skopiuj katalog projektu na serwer razem z katalogiem `jar/`, który zawiera zależności. Polecenia wykonuj w katalogu z `mainApp.java` i `package.json`.
+2. W tym samym katalogu przygotuj plik `.dataEnv`. Wpisz po jednej wartości w wierszu, w poniższej kolejności.
 
-Potrzebujesz JDK z poleceniami `javac` i `java`. Projekt działa z JDK 11. Biblioteki są dołączone w katalogu [jar](jar/). Polecenia wykonuj z katalogu zawierającego `mainApp.java`.
-
-1. **Ustaw adres nasłuchiwania.** W konstruktorze w [httpServer.java](httpServer/httpServer.java) adres IP jest wpisany bezpośrednio przy tworzeniu `InetSocketAddress`. Do testów na własnym komputerze ustaw adres pętli zwrotnej `127.0.0.1`.
-
-   ```java
-   InetSocketAddress sockAddr = new InetSocketAddress("127.0.0.1", port);
+   ```text
+   56571
+   127.0.0.1
+   portal_demo
+   portal_user
+   haslo_uzytkownika
+   5432
+   https://example.org
    ```
 
-2. **Przygotuj plik `.dataEnv`** według przykładu poniżej. W trybie podstawowym możesz pozostawić przykładowe dane bazy. Port HTTP musi być wolny.
+   | Wiersz | Wartość |
+   | --- | --- |
+   | 1 | Port HTTP |
+   | 2–6 | Host PostgreSQL, nazwa bazy, użytkownik, hasło i port bazy |
+   | 7 | Adres strony wyświetlany na stronie powitalnej |
 
-3. **Skompiluj i uruchom serwer.** Poniższe polecenia działają w PowerShellu i CMD.
+   Przy wyłączonym module SQL pozostaw przykładowe wartości w wierszach 2–6, aby zachować pozycję adresu strony.
 
-   ```powershell
-   javac -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp.java
-   
-   java -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp .dataEnv,
-   ```
-
-   W Linuksie użyj dwukropka jako separatora ścieżek.
+3. Skompiluj i uruchom aplikację.
 
    ```bash
-   javac -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp.java
-
-   java -cp ./;jar/javax.json-1.1.4.jar;jar/postgresql-42.7.2.jar;jar/HikariCP-7.0.2.jar;jar/slf4j-api-1.7.2.jar;jar/slf4j-simple-1.7.2.jar mainApp .dataEnv
+   npm run linux_compile
+   npm run linux_start
    ```
 
-   Projekt zawiera też [konfigurację VS Code](.vscode/launch.json) uruchamiającą `mainApp` z argumentem `.dataEnv` oraz [skrypty npm dla Windows](package.json) — `npm run compile` i `npm start`.
+   W PowerShellu i CMD odpowiednie polecenia to `npm run compile` i `npm run start`.
 
-4. **Otwórz** `http://127.0.0.1:56571/`. Strona wyświetli tekst **Welcome to Java Http Server!**. Aby sprawdzić również kod odpowiedzi, wykonaj polecenie w drugim terminalu Windows.
+Serwer nasłuchuje na `127.0.0.1`. Dla konfiguracji powyżej lokalny adres to `http://127.0.0.1:56571`. Jeśli używasz Nginx na tym samym hoście, ustaw ten adres jako cel `proxy_pass`. Adres nasłuchu ustawia konstruktor w [httpServer.java](httpServer/httpServer.java). Żeby zatrzymać serwer, wpisz `exit` w jego konsoli.
 
-   ```powershell
-   curl.exe -i http://127.0.0.1:56571/
-   ```
+## Struktura projektu
 
-   Pierwszy wiersz odpowiedzi to `HTTP/1.1 200 OK`. Dla nieznanej ścieżki, np. `/brak`, serwer zwraca `404`. Aby zakończyć pracę, wpisz `exit` w konsoli serwera.
-
-## Format pliku .dataEnv
-
-Każda wartość zajmuje osobny wiersz. Kolejność ma znaczenie. Plik zawiera same wartości, bez nazw kluczy, znaków `=`, komentarzy i dodatkowych pustych wierszy. Nazwę pliku przekazujesz jako pierwszy argument do `mainApp`.
-
-```text
-56571
-127.0.0.1
-portal_demo
-portal_user
-twoje_haslo
-5432
-https://example.org
-```
-
-| Wiersz | Klucz w kodzie | Znaczenie |
-| --- | --- | --- |
-| 1 | `listenPort` | Port nasłuchiwania HTTP |
-| 2 | `host` | Adres serwera PostgreSQL |
-| 3 | `base_name` | Nazwa bazy danych |
-| 4 | `user` | Użytkownik bazy |
-| 5 | `password` | Hasło użytkownika bazy |
-| 6 | `base_port` | Port PostgreSQL |
-| 7 | `homePage_url` | Adres wyświetlany jako odnośnik na stronie powitalnej |
-
-Port HTTP i adres odnośnika są wykorzystywane także w trybie podstawowym. Wartość `host` dotyczy wyłącznie połączenia z bazą. Adres interfejsu HTTP ustawia konstruktor `httpServer`.
-
-## Gdzie dodać endpoint
-
-| Plik | Rola |
+| Plik lub katalog | Odpowiedzialność |
 | --- | --- |
-| [mainApp.java](mainApp.java) | Wczytuje konfigurację, uruchamia wątek nasłuchujący i obsługuje polecenie `exit`. |
-| [httpServer.java](httpServer/httpServer.java) | Tworzy `ServerSocket`, przyjmuje połączenia i uruchamia osobny wątek dla każdego zaakceptowanego połączenia. |
-| [requestExecute.java](httpServer/requestExecute.java) | Odczytuje żądanie z gniazda klienta, wywołuje parser i wybiera klasę obsługi na podstawie metody HTTP. |
-| [requestParser.java](httpServer/requestParser.java) | Rozdziela linię żądania, ścieżkę, parametry URL i nagłówki. Zawiera także kod odczytu treści i obiektu JSON przez `javax.json`. |
-| [getRoute.java](route/getRoute.java) | Obsługuje `GET /`. Tu można dodać kolejne ścieżki GET. |
-| [postRoute.java](route/postRoute.java) | Miejsce na endpointy POST. W tej wersji klasa zawiera domyślną odpowiedź `404`. |
-| [sqlModule.java](sqlModule/sqlModule.java) | Tworzy pulę HikariCP i udostępnia przykładowe zapytanie `getHotAuction`. |
+| [mainApp.java](mainApp.java) | Wczytuje konfigurację, uruchamia serwer i obsługuje polecenie `exit`. |
+| [httpServer/httpServer.java](httpServer/httpServer.java) | Otwiera gniazdo nasłuchujące i uruchamia osobny wątek dla każdego przyjętego połączenia. |
+| [httpServer/requestExecute.java](httpServer/requestExecute.java) | Odczytuje żądanie porcjami, wywołuje parser i wybiera klasę trasy według metody HTTP. |
+| [httpServer/requestParser.java](httpServer/requestParser.java) | Rozdziela ścieżkę, parametry URL, nagłówki i body. Odczytuje obiekt JSON. |
+| [route/getRoute.java](route/getRoute.java) i [route/postRoute.java](route/postRoute.java) | Zawierają endpointy GET i POST oraz generują odpowiedzi. |
+| [sqlModule/sqlModule.java](sqlModule/sqlModule.java) | Zarządza pulą połączeń PostgreSQL i zawiera przykładowe zapytanie `getHotAuction()`. |
+| [jar/](jar/) i [package.json](package.json) | Biblioteki Javy oraz polecenia kompilacji i uruchamiania. |
 
-**GET.** Dodaj `case` dla swojej ścieżki w `getRoute.route(...)` i skieruj go do metody zapisującej odpowiedź do gniazda klienta. Za wzór służy `getMain(...)`. Parametry adresu są dostępne w mapie `params`, np. dla `/?lang=pl` klucz `lang` ma wartość `pl`. Sama strona powitalna wyświetla tę samą treść.
+## Obsługa żądań i dodawanie endpointów
 
-**POST.** W [requestExecute.java](httpServer/requestExecute.java) za wybór metody HTTP odpowiada `switch (reqParser.method)` wewnątrz `run()`. Poniższa gałąź przekazuje żądanie do istniejącej klasy `postRoute`, której konstruktor przyjmuje gniazdo klienta. Jeśli w swojej wersji masz tylko `case "GET"`, wstaw ten fragment tuż przed `default`.
+`requestExecute` przekazuje każdą odczytaną porcję do `requestParser`. Gdy parser potrzebuje dalszych danych, wątek kontynuuje odczyt. Po skompletowaniu żądania wywołuje `route(reqParser)` w klasie trasy. Limit pojedynczego żądania wynosi 15 000 elementów `char`, a timeout odczytu z gniazda wynosi 200 ms.
 
-```java
-case "POST":
-{
-    postRoute postR = new postRoute(clientSock);
-    postR.route(reqParser.path, reqParser.urlParams, reqParser.headers,
-                reqParser.buffer, reqParser.jsonObj);
-    break;
-}
-```
+Każdy `POST` wymaga nagłówków `Content-Type` i `Content-Length`. Długość podaj w bajtach. Dla pustego body ustaw `Content-Length: 0`. Aby przekazać obiekt JSON, użyj `Content-Type: application/json`.
 
-Po tej zmianie żądania POST trafiają do [postRoute.java](route/postRoute.java). W metodzie `route(...)` dodaj osobny `case` w `switch (path)` dla każdego endpointu. Dopóki przełącznik zawiera tylko `default`, żądanie przekazane do tej klasy otrzyma odpowiedź `404`.
+Nową ścieżkę dodaj jako `case` w `switch (reqParser.path)` w metodzie `route()`. Wybierz `getRoute` dla GET albo `postRoute` dla POST. W trasie masz dostęp do następujących danych.
 
-Jeżeli endpoint ma przyjmować JSON, sprawdź również weryfikację treści w `requestParser`. Obecny warunek `content_length <= buffer.length()` odrzuca także treść o dokładnie zadeklarowanej długości. Nagłówek `Content-Length` określa liczbę bajtów, a `String.length()` liczy jednostki UTF-16.
-
-## Dodanie obsługi PostgreSQL
-
-1. Przygotuj działającą bazę PostgreSQL i konto z dostępem do niej. Wpisz dane połączenia w wierszach 2–6 pliku konfiguracyjnego. W paczce są już sterownik JDBC PostgreSQL, HikariCP i SLF4J.
-2. W konstruktorze klasy `httpServer` odkomentuj instrukcję, która tworzy pulę połączeń.
-
-   ```java
-   sql_module = new sqlModule(dataConf);
-   ```
-
-3. W metodzie `exit()` tej samej klasy odkomentuj wywołanie zamykające pulę.
-
-   ```java
-   sql_module.close();
-   ```
-
-4. Ponownie skompiluj i uruchom program. Moduł buduje adres w formacie `jdbc:postgresql://host:port/baza` i inicjalizuje pulę jeszcze przed rozpoczęciem nasłuchiwania HTTP. Przy błędnych danych lub niedostępnej bazie uruchomienie w tym trybie może się zakończyć na tym etapie.
-
-### Przykład z portalu – najbliższa aukcja
-
-Metoda `getHotAuction(Map<String, String> auctionObj)` pobiera połączenie z puli i wyszukuje najmniejszą wartość `auction_time` większą od bieżącego czasu. Dla znalezionego terminu odczytuje z tabeli `auctions` kolumny `auction_id`, `job_title` i `auction_time`. Czas w tabeli reprezentuje liczbę **milisekund od epoki Unix**. Konto używane przez serwer potrzebuje uprawnienia do odczytu tabeli.
-
-Po włączeniu SQL możesz użyć tej metody w klasie `getRoute`. W poniższym przykładzie pobierany jest tytuł aukcji.
-
-```java
-Map<String, String> auction = new HashMap<>();
-int result = httpServ.sql_module.getHotAuction(auction);
-
-if (result == 0 && !auction.get("auction_id").isEmpty()) {
-    String title = auction.get("job_title");
-    // Użyj tytułu przy budowaniu odpowiedzi dla strony głównej.
-}
-```
-
-| Wynik | Zawartość mapy |
+| Dane | Dostęp w trasie |
 | --- | --- |
-| `0` i znaleziono aukcję | Identyfikator, tytuł i czas aukcji w postaci tekstu |
-| `0` i brak przyszłej aukcji | Wszystkie trzy pola zawierają puste ciągi |
-| `1` | Wystąpił błąd SQL. Kod wywołujący może zwrócić odpowiedź o błędzie. |
+| Ścieżka i parametry URL | Dla `GET /?lang=pl` pole `reqParser.path` zawiera `/`, a `reqParser.urlParams.get("lang")` zwraca `"pl"`. |
+| Nagłówki | `reqParser.headers`, np. `reqParser.headers.get("Content-Type")`. |
+| Body i obiekt JSON | `reqParser.bodyChar` zawiera treść body, a `reqParser.jsonObj` odczytany obiekt JSON. Przy pustym body oba pola mają wartość `null`. |
 
-W portalu wynik trafiał na stronę główną podczas jej ładowania. W tej wersji metoda pozostaje przykładem do wykorzystania we własnej trasie. Samo włączenie puli pozostawia stronę powitalną pod `GET /`.
+W wersji podstawowej `GET /` i poprawnie sformułowany `POST /` zwracają stronę powitalną. Dla nieznanej ścieżki obie klasy zwracają `404`.
+
+## Włączenie PostgreSQL
+
+1. Utwórz bazę i użytkownika, nadaj mu uprawnienia do używanych tabel i wpisz dane połączenia w wierszach 2–6 pliku `.dataEnv`.
+2. W [httpServer.java](httpServer/httpServer.java) odkomentuj `sql_module = new sqlModule(dataConf);` w konstruktorze oraz `sql_module.close();` w metodzie `exit()`.
+3. Ponownie skompiluj i uruchom serwer. Aplikacja inicjalizuje pulę HikariCP przed rozpoczęciem nasłuchu.
+
+
+Z poziomu trasy moduł jest dostępny jako `httpServ.sql_module`. Metoda `getHotAuction(Map<String, String> auctionObj)` pokazuje, jak pobrać połączenie z puli i wykonać zapytanie. W tabeli `auctions` wybiera najbliższą przyszłą aukcję według `auction_time` (milisekundy od epoki Unix) i wpisuje do mapy `auction_id`, `job_title` oraz `auction_time`. Gdy brak przyszłej aukcji, wartości w mapie są pustymi ciągami. Metoda zwraca `0` po wykonaniu zapytania lub `1` przy błędzie SQL. 
+Jest to metoda, która zostala dodana jako przykład obslugi żądania do bazy.

@@ -1,9 +1,10 @@
 package route;
+import httpServer.httpServer;
+import httpServer.requestParser;
 import java.io.*;
 import java.net.*;
-import java.util.*;
-import javax.json.*;
-import httpServer.httpServer;
+// import java.util.*;
+// import javax.json.*;
 
 public class getRoute {
 
@@ -15,19 +16,19 @@ public class getRoute {
         this.httpServ = httpServ;
     }
 
-    public int route(String path, Map<String, String> params, Map<String, String> headers, String buffer, JsonObject jsonObj)
+    public int route(requestParser reqParser)
     {
-        switch (path)
+        switch (reqParser.path)
         {
             case "/" :
-               return getMain(headers, buffer);
+               return getMain();
 
             default : 
                 return notFound();
         }
     }
 
-    private int getMain(Map<String, String> headers, String buffer)
+    private int getMain()
     {
         try
         {
