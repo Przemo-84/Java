@@ -73,3 +73,10 @@ W wersji podstawowej `GET /` i poprawnie sformułowany `POST /` zwracają stron�
 
 Z poziomu trasy moduł jest dostępny jako `httpServ.sql_module`. Metoda `getHotAuction(Map<String, String> auctionObj)` pokazuje, jak pobrać połączenie z puli i wykonać zapytanie. W tabeli `auctions` wybiera najbliższą przyszłą aukcję według `auction_time` (milisekundy od epoki Unix) i wpisuje do mapy `auction_id`, `job_title` oraz `auction_time`. Gdy brak przyszłej aukcji, wartości w mapie są pustymi ciągami. Metoda zwraca `0` po wykonaniu zapytania lub `1` przy błędzie SQL. 
 Jest to metoda, która zostala dodana jako przykład obslugi żądania do bazy.
+
+
+## Licencja
+
+Projekt jest udostępniany na licencji MIT. Pełna treść licencji znajduje się w pliku [LICENSE](LICENSE). Licencja pozwala używać, modyfikować i rozpowszechniać kod, również komercyjnie, pod warunkiem zachowania informacji o prawach autorskich i treści licencji.
+
+Licencje zewnętrznych bibliotek i narzędzi używanych przez projekt pozostają niezależne od licencji tego repozytorium.
